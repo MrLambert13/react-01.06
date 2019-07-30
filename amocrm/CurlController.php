@@ -1,9 +1,19 @@
 <?php
 
+/**
+ * Created by Mr.L@mbert_13
+ */
+
 namespace core;
 
 use Exception;
 
+/**
+ * Class CurlController for initialize request to server
+ *
+ * @property array  $_config
+ * @property string $_link
+ */
 class CurlController
 {
   private $_config;
@@ -23,7 +33,7 @@ class CurlController
   /**
    * Initialization configuration
    *
-   * @param array $configuration
+   * @param array $configuration  Array of config
    *
    * @throws Exception
    */
@@ -35,6 +45,12 @@ class CurlController
     }
   }
 
+  /**
+   * Create URL for connect
+   *
+   * @param string  $apiType  API URL (look settings.php)
+   * @param null    $params   Optional parameters
+   */
   public function createLink($apiType, $params = null)
   {
     $this->_link = 'https://'
@@ -45,9 +61,16 @@ class CurlController
     if (isset($params)) {
       $this->_link .= $params;
     }
-    var_dump($this->_link);
   }
 
+  /**
+   * Request to the server and get respons or error code, and save cookie
+   *
+   * @param string  $method   Used method
+   * @param array   $request  Fields for POST request
+   *
+   * @return array  $result   Response from server
+   */
   public function request($method = 'GET', $request = null)
   {
     $curl = curl_init($this->_link);
@@ -82,6 +105,9 @@ class CurlController
     return $result;
   }
 
+  /**
+   * Function for make authorization on server
+   */
   public function authorization()
   {
     $this->createLink('auth', '?type=json');
