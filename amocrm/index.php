@@ -1,41 +1,52 @@
 <?php
-require_once 'settings.php';
 
-$link = 'https://' . $subdomain . $API['auth'];
+use core\CurlController;
 
-$curl = curl_init($link);
+include_once 'CurlController.php';
 
-curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($curl, CURLOPT_USERAGENT, 'amoCRM-API-client/1.0');
-curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'POST');
-curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($user));
-curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
-curl_setopt($curl, CURLOPT_HEADER, false);
-curl_setopt($curl, CURLOPT_COOKIEFILE, dirname(__FILE__) . '/cookie.txt');
-curl_setopt($curl, CURLOPT_COOKIEJAR, dirname(__FILE__) . '/cookie.txt');
-curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
-curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+$configurations = require 'settings.php';
 
-$out = curl_exec($curl);
+$app = new CurlController();
+$app->init($configurations);
+$app->authorization();
 
-$code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-
-curl_close($curl);
-
-$code = (int) $code;
-
-try {
-  if ($code != 200 && $code != 204) {
-    throw new Exception(isset($errors[$code]) ? $errors[$code] : 'Undescribed error', $code);
-  }
-} catch (Exception $E) {
-  die('Ошибка: ' . $E->getMessage() . PHP_EOL . 'Код ошибки: ' . $E->getCode());
-}
 /*
-Данные получаем в формате JSON, поэтому, для получения читаемых данных,
-нам придётся перевести ответ в формат, понятный PHP
- */
+* Get leads without tasks
+*/
+$app->createLink('leads', '?filter[tasks]=1');
+$out = $app->request('GET');
 $response = json_decode($out, true);
-$response = $response['response'];
+$response = $response['_embedded']['items'];
+$leads_without_tasks = [];
+foreach ($response as $key => $item) {
+  array_push($leads_without_tasks, $item['id']);
+}
 
-return isset($response['auth']) ? $response['auth'] : false;
+/**
+ * Add tasks in finded leads (if last set)
+ */
+if (count($leads_without_tasks) > 0) {
+  $app->createLink('tasks');
+  $tasks['add'] = [];
+  foreach ($leads_without_tasks as $item) {
+    array_push(
+      $tasks['add'],
+      [
+        'element_id' => $item,
+        'element_type' => 2,
+        'text' => 'Сделка без задачи',
+        'complete_till_at' => strtotime("+1 day")
+      ],
+    );
+  }
+  // var_dump($tasks);
+
+  $out = $app->request('POST', $tasks);
+  $response = json_decode($out, true);
+  $response = $response['_embedded']['items'];
+  var_dump(
+    count($response) === count($leads_without_tasks)
+      ? 'Tasks added successful'
+      : 'Tasks did not add'
+  );
+}

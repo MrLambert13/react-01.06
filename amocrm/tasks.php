@@ -6,7 +6,7 @@ $tasks['add'] = array(
     'element_id' => 989183,
     'element_type' => 2,
     'text' => 'Сделка без задачи',
-    'complete_till_at' => strtotime("+1 day"),
+    'complete_till_at' => strtotime("+1 day")
   )
 );
 
