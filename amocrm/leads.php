@@ -1,14 +1,13 @@
 <?php
 require_once 'settings.php';
 
-$link = 'https://' . $subdomain . $API['auth'];
+$link = 'https://' . $subdomain . $API['leads'] . '?filter[tasks]=1';
 
 $curl = curl_init($link);
 
 curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($curl, CURLOPT_USERAGENT, 'amoCRM-API-client/1.0');
-curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'POST');
-curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($user));
+curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'GET');
 curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
 curl_setopt($curl, CURLOPT_HEADER, false);
 curl_setopt($curl, CURLOPT_COOKIEFILE, dirname(__FILE__) . '/cookie.txt');
@@ -38,13 +37,14 @@ try {
 } catch (Exception $E) {
   die('Ошибка: ' . $E->getMessage() . PHP_EOL . 'Код ошибки: ' . $E->getCode());
 }
-/*
-Данные получаем в формате JSON, поэтому, для получения читаемых данных,
-нам придётся перевести ответ в формат, понятный PHP
- */
-$response = json_decode($out, true);
-$response = $response['response'];
-
-return isset($response['auth']) ? $response['auth'] : false;
 
 curl_close($curl); #Завершаем сеанс cURL
+
+$response = json_decode($out, true);
+$response = $response['_embedded']['items'];
+$leads_without_tasks = [];
+foreach ($response as $key => $item) {
+  array_push($leads_without_tasks, $item['id']);
+}
+
+return count($leads_without_tasks) > 0 ? $leads_without_tasks : false;
